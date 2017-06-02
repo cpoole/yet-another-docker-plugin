@@ -12,11 +12,11 @@ import hudson.model.Label;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 import static jenkins.model.Jenkins.getInstance;
 
@@ -73,6 +73,37 @@ public class DockerFunctions {
                 .filter(DockerCloud.class::isInstance)
                 .map(cloud -> (DockerCloud) cloud)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Count the number of current docker slaves for a given DockerCloud.
+     *
+     * @param cloud A DockerCloud.
+     * @return The number of slaves provisioned by the DockerCloud.
+     */
+    public static int countCurrentDockerSlaves(DockerCloud cloud) {
+        try {
+            return cloud.countCurrentDockerSlaves(null);
+        } catch (Exception e) {
+            //an exception was thrown so return an invalid count for current docker slaves
+            return -1;
+        }
+    }
+
+    /**
+     * Get a list of available DockerCloud clouds which are not at max
+     * capacity.
+     *
+     * @param label A label expression of a Job Run requiring an executor.
+     * @return A list of available DockerCloud clouds.
+     */
+    public static List<DockerCloud> getAvailableDockerClouds(Label label) {
+        return getDockerClouds().stream()
+            .filter(cloud ->
+                    cloud.canProvision(label) &&
+                    (countCurrentDockerSlaves(cloud) >= 0) &&
+                    (countCurrentDockerSlaves(cloud) < cloud.getContainerCap()))
+            .collect(Collectors.toList());
     }
 
     public static DockerCloud anyCloudForLabel(Label label) {
